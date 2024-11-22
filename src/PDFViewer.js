@@ -1,6 +1,4 @@
-
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 function AdobePDFViewer({
   pdfUrl = "/mypdf.pdf",
@@ -11,6 +9,8 @@ function AdobePDFViewer({
 }) {
   const [adobeDCView, setAdobeDCView] = useState(null);
   const [fileRef, setFileRef] = useState(null);
+  const [pdfBlob, setPdfBlob] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
 
   useEffect(() => {
     // Dynamically load Adobe View SDK
@@ -20,7 +20,6 @@ function AdobePDFViewer({
     document.body.appendChild(script);
 
     script.onload = () => {
-      // Wait for Adobe SDK to be ready
       document.addEventListener("adobe_dc_view_sdk.ready", () => {
         if (window.AdobeDC && window.AdobeDC.View) {
           const dcView = new window.AdobeDC.View({
@@ -28,63 +27,99 @@ function AdobePDFViewer({
             divId: divId,
           });
 
+          // Register save callback to handle blob
+          dcView.registerCallback(
+            window.AdobeDC.View.Enum.CallbackType.SAVE_API,
+            function (metaData, content, options, blob) {
+              console.log("Save triggered", { metaData, content });
+
+              // Store the blob
+              setPdfBlob(blob);
+              setLastSaved(new Date().toISOString());
+
+              return new Promise((resolve) => {
+                resolve({
+                  code: window.AdobeDC.View.Enum.ApiResponseCode.SUCCESS,
+                  data: {
+                    metaData: metaData,
+                  },
+                });
+              });
+            },
+            {
+              autoSaveFrequency: 0.25, // Check every 250ms
+              enableFocusPolling: true,
+              showSaveButton: true,
+            }
+          );
+
+          // Register zoom callback
           dcView.registerCallback(
             window.AdobeDC.View.Enum.CallbackType.SAVE_API,
             function (event) {
-              console.log("event triggered", event, event.data);
               if (event.type === "PAGE_ZOOM") {
-                window.alert("zoom triggered");
-                console.log("Zoom event triggered!");
                 console.log("Zoom level:", event.data.zoom);
               }
             },
             {
-              enablePDFAnalytics: true, // Enables events like PAGE_ZOOM
+              enablePDFAnalytics: true,
             }
           );
+
           const fileReference = dcView.previewFile(
             {
               content: { location: { url: pdfUrl } },
-              metaData: { fileName: pdfUrl,id:'test' },
+              metaData: { fileName: pdfUrl, id: "test" },
             },
             {
-              // Additional configuration options can be added here
               showAnnotationTools: false,
               dockPageControls: false,
-
-              // embedMode: "FULL_WINDOW",
               defaultViewMode: "FIT_PAGE",
-              // enableLinearization: true,
               showDownloadPDF: false,
-              // showPrintPDF: true,
               showLeftHandPanel: false,
-              // showAnnotationTools: false,
-              enableFormFilling: true, // Ensure form filling is enabled
-              showSaveButton: true, // Enable Save button
+              enableFormFilling: true,
+              showSaveButton: true,
               enableAnnotationAPIs: true,
-              // includePDFAnnotations: true,
               showPageControls: false,
               showZoomControl: true,
-              // showRotateControl: false,
               disableTextSelection: true,
-              // annotationManagerEditMode: "READ",
-              // showBookmarks:false,
-              // showThumbnails:false,
             }
           );
 
-          // Store the Adobe DC View and file reference
           setAdobeDCView(dcView);
           setFileRef(fileReference);
         }
       });
     };
 
-    // Cleanup function
     return () => {
       document.body.removeChild(script);
     };
   }, [pdfUrl, clientId, divId]);
+
+  const handleSave = async () => {
+    if (pdfBlob) {
+      try {
+        // Create download link for blob
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "document.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Error saving PDF:", error);
+        alert("Error saving PDF. Please try again.");
+      }
+    } else {
+      alert("No PDF content available yet. Please make changes first.");
+    }
+  };
+
+  // Function to get the current blob (can be exposed through props if needed)
+  const getCurrentBlob = () => pdfBlob;
 
   return (
     <div>
@@ -96,6 +131,7 @@ function AdobePDFViewer({
         }}
       />
       <button
+        onClick={handleSave}
         style={{
           marginTop: "10px",
           padding: "10px 20px",
@@ -108,6 +144,11 @@ function AdobePDFViewer({
       >
         Save PDF
       </button>
+      {lastSaved && (
+        <div style={{ marginTop: "10px", fontSize: "14px", color: "#666" }}>
+          Last saved: {new Date(lastSaved).toLocaleString()}
+        </div>
+      )}
     </div>
   );
 }
