@@ -8,8 +8,7 @@ function AdobePDFViewer({
   width = "100%",
 }) {
   const [adobeDCView, setAdobeDCView] = useState(null);
-  const [fileRef, setFileRef] = useState(null);
-  const [pdfBlob, setPdfBlob] = useState(null);
+  const [pdfContent, setPdfContent] = useState(null); // For base64 content
   const [lastSaved, setLastSaved] = useState(null);
 
   useEffect(() => {
@@ -27,36 +26,28 @@ function AdobePDFViewer({
             divId: divId,
           });
 
-          // Register save callback to handle blob
+          // Register save callback
           dcView.registerCallback(
             window.AdobeDC.View.Enum.CallbackType.SAVE_API,
-            function (metaData, content, options, blob) {
+            async (metaData, content) => {
               console.log("Save triggered", { metaData, content });
-
-              // Store the blob
-              setPdfBlob(blob);
+              setPdfContent(content);
               setLastSaved(new Date().toISOString());
 
-              return new Promise((resolve) => {
-                resolve({
-                  code: window.AdobeDC.View.Enum.ApiResponseCode.SUCCESS,
-                  data: {
-                    metaData: metaData,
-                  },
-                });
-              });
+              return {
+                code: window.AdobeDC.View.Enum.ApiResponseCode.SUCCESS,
+                data: { metaData },
+              };
             },
             {
-              autoSaveFrequency: 0.25, // Check every 250ms
-              enableFocusPolling: true,
               showSaveButton: true,
             }
           );
 
-          // Register zoom callback
+          // Register event listener for zoom
           dcView.registerCallback(
-            window.AdobeDC.View.Enum.CallbackType.SAVE_API,
-            function (event) {
+            window.AdobeDC.View.Enum.CallbackType.EVENT_LISTENER,
+            (event) => {
               if (event.type === "PAGE_ZOOM") {
                 console.log("Zoom level:", event.data.zoom);
               }
@@ -66,10 +57,10 @@ function AdobePDFViewer({
             }
           );
 
-          const fileReference = dcView.previewFile(
+          dcView.previewFile(
             {
               content: { location: { url: pdfUrl } },
-              metaData: { fileName: pdfUrl, id: "test" },
+              metaData: { fileName: pdfUrl },
             },
             {
               showAnnotationTools: false,
@@ -87,7 +78,6 @@ function AdobePDFViewer({
           );
 
           setAdobeDCView(dcView);
-          setFileRef(fileReference);
         }
       });
     };
@@ -97,11 +87,19 @@ function AdobePDFViewer({
     };
   }, [pdfUrl, clientId, divId]);
 
-  const handleSave = async () => {
-    if (pdfBlob) {
+  const handleSave = () => {
+    if (pdfContent) {
       try {
+        // Decode base64 content to a Blob
+        const byteCharacters = atob(pdfContent);
+        const byteNumbers = new Array(byteCharacters.length).map((_, i) =>
+          byteCharacters.charCodeAt(i)
+        );
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+
         // Create download link for blob
-        const url = URL.createObjectURL(pdfBlob);
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "document.pdf";
@@ -117,9 +115,6 @@ function AdobePDFViewer({
       alert("No PDF content available yet. Please make changes first.");
     }
   };
-
-  // Function to get the current blob (can be exposed through props if needed)
-  const getCurrentBlob = () => pdfBlob;
 
   return (
     <div>
