@@ -45,7 +45,7 @@ function AdobePDFViewer({
           const fileReference = dcView.previewFile(
             {
               content: { location: { url: pdfUrl } },
-              metaData: { fileName: pdfUrl },
+              metaData: { fileName: pdfUrl,id:'test' },
             },
             {
               // Additional configuration options can be added here
