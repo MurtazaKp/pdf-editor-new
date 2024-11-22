@@ -88,9 +88,8 @@ function AdobePDFViewer({
     };
   }, [pdfUrl, clientId, divId]);
 
-  console.log(pdfContent,'here-----------');
+console.log(pdfContent,'here-----------');
   
-
  const handleSave = () => {
    if (pdfContent) {
      try {
