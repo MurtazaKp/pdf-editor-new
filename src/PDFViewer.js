@@ -36,7 +36,7 @@ function AdobePDFViewer({
 
               return {
                 code: window.AdobeDC.View.Enum.ApiResponseCode.SUCCESS,
-                data: { metaData,id:"sdjsidfnsidn" },
+                data: { metaData },
               };
             },
             {
@@ -60,7 +60,7 @@ function AdobePDFViewer({
           dcView.previewFile(
             {
               content: { location: { url: pdfUrl } },
-              metaData: { fileName: pdfUrl },
+              metaData: { fileName: pdfUrl, id:"sjisifjij" },
             },
             {
               showAnnotationTools: false,
