@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { saveAs } from "file-saver";
 
 function AdobePDFViewer({
   pdfUrl = "/mypdf.pdf",
@@ -87,34 +88,30 @@ function AdobePDFViewer({
     };
   }, [pdfUrl, clientId, divId]);
 
-  const handleSave = () => {
-    if (pdfContent) {
-      try {
-        // Decode base64 content to a Blob
-        const byteCharacters = atob(pdfContent);
-        const byteNumbers = new Array(byteCharacters.length).map((_, i) =>
-          byteCharacters.charCodeAt(i)
-        );
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "application/pdf" });
+  console.log(pdfContent,'here-----------');
+  
 
-        // Create download link for blob
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "document.pdf";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error("Error saving PDF:", error);
-        alert("Error saving PDF. Please try again.");
-      }
-    } else {
-      alert("No PDF content available yet. Please make changes first.");
-    }
-  };
+ const handleSave = () => {
+   if (pdfContent) {
+     try {
+       // Decode base64 content to a Blob
+       const byteCharacters = atob(pdfContent);
+       const byteNumbers = new Array(byteCharacters.length).map((_, i) =>
+         byteCharacters.charCodeAt(i)
+       );
+       const byteArray = new Uint8Array(byteNumbers);
+       const blob = new Blob([byteArray], { type: "application/pdf" });
+
+       // Use saveAs to trigger file download
+       saveAs(blob, "document.pdf");
+     } catch (error) {
+       console.error("Error saving PDF:", error);
+       alert("Error saving PDF. Please try again.");
+     }
+   } else {
+     alert("No PDF content available yet. Please make changes first.");
+   }
+ };
 
   return (
     <div>
